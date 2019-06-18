@@ -74,6 +74,7 @@ func dataSourceKubePortForwardRead(d *schema.ResourceData, meta interface{}) err
 	log.Printf("[DEBUG] portForwarded: %v", portForwarded)
 
 	d.SetId(localPort)
+
 	// Get Kubeconfig file
 	var kubeconfig string
 	kubeconfig = d.Get("kube_config").(string)
@@ -101,7 +102,6 @@ func dataSourceKubePortForwardRead(d *schema.ResourceData, meta interface{}) err
 
 	if portForwarded == false {
 		// Get k8s service
-		log.Printf("Getting service %s in namespace %s", serviceName, namespace)
 		svc, err := clientset.CoreV1().Services(namespace).Get(serviceName, metav1.GetOptions{})
 		if err != nil {
 			return fmt.Errorf("Can't get kubernetes service %s in namespace %s : %s", serviceName, namespace, err.Error())
@@ -179,24 +179,17 @@ func dataSourceKubePortForwardRead(d *schema.ResourceData, meta interface{}) err
 				go func() {
 					<-signals
 					if stopChannel != nil {
-						log.Println("[KUBEPORTFORWARD] Closing Kube Port Forward Channel")
+						log.Printf("[KUBEPORTFORWARD] Closing Kube Port Forward Channel")
 						fw.Close()
 					}
 				}()
 
 				d.Set("port_forwarded", true)
-				//wg.Add(1)
 
 				go fw.ForwardPorts()
 
 				time.Sleep(time.Second)
 				log.Printf("Kube Port forwarded")
-				//wg.Wait()
-				// fwdedPorts, err := fw.GetPorts()
-				// if err != nil {
-				// 	return fmt.Errorf("Can't get forwarded ports %s", err.Error())
-				// }
-				// d.Set("local_port", fwdedPorts)
 			}
 		}
 		if podFound == false {
