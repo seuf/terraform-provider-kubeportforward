@@ -1,4 +1,4 @@
-VERSION = v0.0.1
+VERSION = v0.0.2
 LDFLAGS = -ldflags '-s -w'
 GOARCH = amd64
 linux: export GOOS=linux
@@ -15,9 +15,9 @@ all: linux linux_arm linux_arm64 darwin windows
 linux:
 	mkdir -p release
 	rm -f terraform-provider-kubeportforward_${VERSION} release/terraform-provider-kubeportforward_${VERSION}_${GOOS}_${GOARCH}.zip
-	go build $(LDFLAGS) -o terraform-provider-kubeportforward_${VERSION}
-	chmod +x terraform-provider-kubeportforward_${VERSION}
-	zip release/terraform-provider-kubeportforward_${VERSION}_${GOOS}_${GOARCH}.zip terraform-provider-kubeportforward_${VERSION}
+	go build $(LDFLAGS) -o terraform-provider-kubeportforward_${VERSION}-linux-amd64
+	chmod +x terraform-provider-kubeportforward_${VERSION}-linux-amd64
+	zip release/terraform-provider-kubeportforward_${VERSION}_${GOOS}_${GOARCH}.zip terraform-provider-kubeportforward_${VERSION}-linux-amd64
 
 linux_arm:
 	mkdir -p release

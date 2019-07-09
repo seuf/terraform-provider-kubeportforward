@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
@@ -31,6 +32,12 @@ func dataSourceKubePortForward() *schema.Resource {
 				Default:     "",
 				Optional:    true,
 				Description: "kubectl config file. default to $HOME/.kube/config",
+			},
+			"context": &schema.Schema{
+				Type:        schema.TypeString,
+				Default:     "",
+				Optional:    true,
+				Description: "kubectl context to choose in the kube config file. Default context is choosen if empty.",
 			},
 			"namespace": &schema.Schema{
 				Type:        schema.TypeString,
@@ -61,6 +68,7 @@ func dataSourceKubePortForward() *schema.Resource {
 }
 
 func dataSourceKubePortForwardRead(d *schema.ResourceData, meta interface{}) error {
+	context := d.Get("context").(string)
 	namespace := d.Get("namespace").(string)
 	serviceName := d.Get("service").(string)
 	localPort := d.Get("local_port").(string)
@@ -88,8 +96,8 @@ func dataSourceKubePortForwardRead(d *schema.ResourceData, meta interface{}) err
 	if _, err := os.Stat(kubeconfig); os.IsNotExist(err) {
 		return fmt.Errorf("[ERROR] kubectl config file %s does not exists", kubeconfig)
 	}
-	// use the current context in kubeconfig
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+
+	config, err := buildConfigFromFlags(context, kubeconfig)
 	if err != nil {
 		return fmt.Errorf("[ERROR] Can't Load kubectl config file %s : %s", kubeconfig, err.Error())
 	}
@@ -130,7 +138,7 @@ func dataSourceKubePortForwardRead(d *schema.ResourceData, meta interface{}) err
 				podStatus = pod.Status.Phase
 				continue
 			}
-			podFound = true
+
 			podPort := ""
 
 			for _, port := range svc.Spec.Ports {
@@ -147,7 +155,10 @@ func dataSourceKubePortForwardRead(d *schema.ResourceData, meta interface{}) err
 				if podPort != remotePort {
 					continue
 				}
+
+				podFound = true
 				log.Printf("Found pod with remote port %s", pod.Name)
+
 				// Create dialer
 				path := fmt.Sprintf("/api/v1/namespaces/%s/pods/%s/portforward", namespace, pod.Name)
 				hostIP := strings.TrimLeft(config.Host, "https://")
@@ -188,8 +199,9 @@ func dataSourceKubePortForwardRead(d *schema.ResourceData, meta interface{}) err
 
 				go fw.ForwardPorts()
 
-				time.Sleep(time.Second)
+				time.Sleep(time.Second) // Sleep 1 seconf to allow goroutine to start
 				log.Printf("Kube Port forwarded")
+				break
 			}
 		}
 		if podFound == false {
@@ -232,4 +244,16 @@ func portSearch(portName string, containers []v1.Container) (string, bool) {
 	}
 
 	return "", false
+}
+
+func buildConfigFromFlags(context, kubeconfigPath string) (*rest.Config, error) {
+	if context == "" {
+		return clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+	} else {
+		return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+			&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
+			&clientcmd.ConfigOverrides{
+				CurrentContext: context,
+			}).ClientConfig()
+	}
 }

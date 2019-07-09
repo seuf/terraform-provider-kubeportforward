@@ -1,22 +1,24 @@
-### terraform-provider-kubeportforward
+# terraform-provider-kubeportforward
 
 This provider enables Kube port forwarding in Terraform.
 
 *This provider does not support Terraform v0.12 yet. There were some changes made that makes the upgrade non-trivial.*
 
 This provider is inspired by :
+
 * [stefansundin/terraform-provider-ssh](https://github.com/stefansundin/terraform-provider-ssh).
 * [txn2/kubefwd](https://github.com/txn2/kubefwd)
 
-#### Example
+## Example
 
-```
+```terraform
 provider "kubeportforward" {
   version = "~> 0.0"
 }
 
 data "kubeportforward" "grafana" {
   kube_config = "/home/seuf/.kube/config"
+  context     = "k3s_default"
   namespace   = "monitoring"
   service     = "grafana"
   local_port  = "3000"
@@ -47,7 +49,7 @@ resource "grafana_data_source" "influxdb" {
 
 Each resource which need the kube port forward need to explicitely add a dependency to the kubeportforward provider.
 
-#### Installation
+## Installation
 
 On Linux:
 
@@ -69,11 +71,11 @@ rm terraform-provider-kubeportforward_v0.0.1_darwin_amd64.zip
 terraform init
 ```
 
-### Build
+## Build
 
 Refering to [client-go install](https://github.com/kubernetes/client-go/blob/master/INSTALL.md). Fix the following packages version :
 
-```
+```shell
 go get k8s.io/client-go@v11.0.0
 go get k8s.io/api@kubernetes-1.14.0
 go get k8s.io/apimachinery@kubernetes-1.14.0
@@ -81,11 +83,10 @@ go get k8s.io/apimachinery@kubernetes-1.14.0
 
 Then you can build the binary :
 
-```
+```shell
 make linux
 ```
 
+## TODO
 
-#### TODO
-
-- Note that the Windows binary is completely untested!
+* Note that the Windows binary is completely untested!
